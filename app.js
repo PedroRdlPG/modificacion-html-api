@@ -39,3 +39,32 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
+
+// Endpoint para recibir el webhook de GitHub
+app.post('/github-webhook', (req, res) => {
+    const payload = req.body;
+
+    // Verifica si el evento es un push a la rama principal
+    if (payload.ref === 'refs/heads/main') {
+        // Ejecuta git pull
+        const simpleGit = require('simple-git');
+        const git = simpleGit();
+
+        git.pull('origin', 'main', (err, update) => {
+            if (err) {
+                return res.status(500).send('Error al hacer pull');
+            }
+
+            // Verifica si el pull trajo cambios
+            if (update && update.summary.changes) {
+                console.log('Se actualizaron los archivos');
+                res.status(200).send('Repositorio actualizado');
+            } else {
+                console.log('No hay cambios');
+                res.status(200).send('No hay cambios en el repositorio');
+            }
+        });
+    } else {
+        res.status(200).send('Evento ignorado');
+    }
+});
